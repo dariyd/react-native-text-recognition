@@ -6,7 +6,7 @@ const { ReactNativeTextRecognition } = NativeModules;
 
 export default ReactNativeTextRecognition;
 
-export function launchScanner(imagUrl, callback) {
+export function recognizeText(imagUrl, callback) {
   return new Promise(resolve => {
     ReactNativeTextRecognition.detectText(
       imagUrl,

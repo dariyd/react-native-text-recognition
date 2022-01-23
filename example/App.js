@@ -16,6 +16,7 @@ import {
   Text,
   useColorScheme,
   View,
+  Button,
 } from 'react-native';
 
 import {
@@ -25,6 +26,8 @@ import {
   LearnMoreLinks,
   ReloadInstructions,
 } from 'react-native/Libraries/NewAppScreen';
+
+import {recognizeText} from 'react-native-text-recognition';
 
 const Section = ({children, title}): Node => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -59,6 +62,11 @@ const App: () => Node = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
+  const detectText = async () => {
+    const results = await recognizeText('https://images.wapcar.my/file1/ad1db41b20ef4cceaea3ff0fe5bd3690_800.jpg');
+    console.log('Results', results);
+  };
+
   return (
     <SafeAreaView style={backgroundStyle}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
@@ -77,13 +85,7 @@ const App: () => Node = () => {
           <Section title="See Your Changes">
             <ReloadInstructions />
           </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
+          <Button onPress={detectText} title="FIND TEXT" />
         </View>
       </ScrollView>
     </SafeAreaView>

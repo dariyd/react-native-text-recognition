@@ -5217,6 +5217,10 @@ react-native-codegen@^0.0.8:
     jscodeshift "^0.11.0"
     nullthrows "^1.1.1"
 
+"react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
+  version "1.0.0"
+  resolved "https://github.com/dariyd/react-native-text-recognition.git#219764dac2a8bb76f6eafbc4db09e3889eae4e79"
+
 react-native@0.67.1:
   version "0.67.1"
   resolved "https://registry.yarnpkg.com/react-native/-/react-native-0.67.1.tgz#a9cc13f1a691e9bb23f146f001e11fc0157af51c"
