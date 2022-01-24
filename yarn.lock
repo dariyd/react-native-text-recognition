@@ -3619,10 +3619,6 @@ react-is@^16.12.0, react-is@^16.13.1, react-is@^16.8.4:
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-16.13.1.tgz#789729a4dc36de2999dc156dd6c1d9c18cea56a4"
   integrity sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==
 
-"react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
-  version "1.0.0"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#219764dac2a8bb76f6eafbc4db09e3889eae4e79"
-
 react-native@^0.61.5:
   version "0.61.5"
   resolved "https://registry.yarnpkg.com/react-native/-/react-native-0.61.5.tgz#6e21acb56cbd75a3baeb1f70201a66f42600bba8"
