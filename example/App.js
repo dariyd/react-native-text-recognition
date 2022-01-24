@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import type {Node} from 'react';
+
 import {
   SafeAreaView,
   ScrollView,
@@ -28,8 +28,9 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 import {recognizeText} from 'react-native-text-recognition';
+import {launchCamera, launchImageLibrary} from 'react-native-image-picker';
 
-const Section = ({children, title}): Node => {
+const Section = ({children, title}) => {
   const isDarkMode = useColorScheme() === 'dark';
   return (
     <View style={styles.sectionContainer}>
@@ -55,7 +56,7 @@ const Section = ({children, title}): Node => {
   );
 };
 
-const App: () => Node = () => {
+const App = () => {
   const isDarkMode = useColorScheme() === 'dark';
 
   const backgroundStyle = {
@@ -65,6 +66,23 @@ const App: () => Node = () => {
   const detectText = async () => {
     const results = await recognizeText('https://images.wapcar.my/file1/ad1db41b20ef4cceaea3ff0fe5bd3690_800.jpg');
     console.log('Results', results);
+  };
+
+  const openCamera = async () => {
+    const result = await launchCamera();
+    console.log('result ', result);
+
+    const img = result.assets[0].uri;
+    const results = await recognizeText(img);
+    console.log('results words', results);
+  };
+
+  const openGallery = async () => {
+    const result = await launchImageLibrary();
+    console.log('result ', result);
+    const img = result.assets[0].uri;
+    const results = await recognizeText(img);
+    console.log('results words', results);
   };
 
   return (
@@ -86,6 +104,8 @@ const App: () => Node = () => {
             <ReloadInstructions />
           </Section>
           <Button onPress={detectText} title="FIND TEXT" />
+          <Button onPress={openCamera} title="OPEN CAMERA" />
+          <Button onPress={openGallery} title="OPEN GALLERY" />
         </View>
       </ScrollView>
     </SafeAreaView>
