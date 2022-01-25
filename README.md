@@ -1,5 +1,5 @@
 # react-native-text-recognition (only IOS now)
-This is a React Native module to use ios VisinKit framework and VNDocumentScanner to scan documents
+This is a React Native module to use ios VisinKit recognition to recognize text on images
 ## Getting started
 
 `$ yarn add https://github.com/dariyd/react-native-text-recognition.git`
