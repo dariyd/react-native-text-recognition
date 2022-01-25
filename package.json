@@ -37,7 +37,4 @@
     "react": "^16.9.0",
     "react-native": "^0.61.5"
   },
-  "dependencies": {
-    "react-native-text-recognition": "https://github.com/dariyd/react-native-text-recognition.git"
-  }
 }
