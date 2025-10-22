@@ -18,13 +18,16 @@
 
 RCT_EXPORT_MODULE()
 
-#ifdef RCT_NEW_ARCH_ENABLED
+// Codegen will auto-generate the bridge/turbomodule registration
+
++ (BOOL)requiresMainQueueSetup {
+    return NO;
+}
+
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
-    (const facebook::react::ObjCTurboModule::InitParams &)params
-{
+    (const facebook::react::TurboModule::InitParams &)params {
     return std::make_shared<facebook::react::NativeTextRecognitionSpecJSI>(params);
 }
-#endif
 
 #pragma mark - Public Methods
 
