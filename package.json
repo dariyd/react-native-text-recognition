@@ -1,14 +1,17 @@
 {
-  "name": "react-native-text-recognition",
+  "name": "@dariyd/react-native-text-recognition",
   "title": "React Native Text Recognition",
-  "version": "1.0.0",
-  "description": "TODO",
+  "version": "2.0.0",
+  "description": "Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit (Android). Supports multi-language recognition, PDF files, and both old and new React Native architectures.",
   "main": "index.js",
+  "types": "index.d.ts",
   "files": [
     "README.md",
+    "LICENSE",
     "android",
-    "index.js",
     "ios",
+    "index.js",
+    "index.d.ts",
     "react-native-text-recognition.podspec"
   ],
   "scripts": {
@@ -16,28 +19,51 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/github_account/react-native-text-recognition.git",
-    "baseUrl": "https://github.com/github_account/react-native-text-recognition"
+    "url": "git+https://github.com/dariyd/react-native-text-recognition.git",
+    "baseUrl": "https://github.com/dariyd/react-native-text-recognition"
   },
   "keywords": [
-    "react-native"
+    "react-native",
+    "ocr",
+    "text-recognition",
+    "vision",
+    "ml-kit",
+    "pdf",
+    "text-detection",
+    "image-to-text",
+    "vision-api",
+    "multi-language",
+    "ios",
+    "android",
+    "turbomodules",
+    "fabric",
+    "new-architecture"
   ],
   "author": {
-    "name": "Your Name",
-    "email": "yourname@email.com"
+    "name": "dariyd",
+    "email": "dariyd@users.noreply.github.com"
   },
   "license": "MIT",
   "licenseFilename": "LICENSE",
   "readmeFilename": "README.md",
   "peerDependencies": {
-    "react": ">=16.8.1",
-    "react-native": ">=0.60.0-rc.0 <1.0.x"
+    "react": ">=18.2.0",
+    "react-native": ">=0.77.3"
   },
   "devDependencies": {
-    "react": "^16.9.0",
-    "react-native": "^0.61.5"
+    "react": "^18.3.1",
+    "react-native": "^0.77.3",
+    "typescript": "^5.0.0"
   },
-  "dependencies": {
-    "react-native-text-recognition": "https://github.com/dariyd/react-native-text-recognition.git"
+  "engines": {
+    "node": ">=18"
+  },
+  "codegenConfig": {
+    "name": "RNTextRecognitionSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "com.reactnativetextrecognition"
+    }
   }
 }
