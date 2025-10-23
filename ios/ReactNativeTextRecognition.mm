@@ -204,7 +204,6 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
     });
 }
 
-- (void)processPDFFile:(NSURL *)url
                options:(NSDictionary *)options
               maxPages:(NSInteger)maxPages
                 pdfDpi:(NSInteger)pdfDpi
@@ -215,65 +214,110 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
 API_AVAILABLE(ios(11.0))
 {
     PDFDocument *pdfDocument = [[PDFDocument alloc] initWithURL:url];
-    
     if (!pdfDocument) {
         [self sendError:@"Failed to load PDF document"];
         return;
     }
-    
+
     NSInteger pageCount = pdfDocument.pageCount;
     NSInteger pagesToProcess = MIN(pageCount, maxPages);
-    
-    RCTLogInfo(@"Processing PDF: %ld pages, DPI: %ld, preprocess: %@", 
-               (long)pagesToProcess, (long)pdfDpi, preprocessImages ? @"YES" : @"NO");
-    
-    NSMutableArray *allPages = [NSMutableArray array];
-    
+
+    RCTLogInfo(@"Processing PDF (smart): %ld/%ld pages", (long)pagesToProcess, (long)pageCount);
+
+    NSMutableArray *allPages = [NSMutableArray arrayWithCapacity:pagesToProcess];
+    NSMutableString *fullText = [NSMutableString string];
+
     for (NSInteger i = 0; i < pagesToProcess; i++) {
         @autoreleasepool {
             PDFPage *pdfPage = [pdfDocument pageAtIndex:i];
-            if (!pdfPage) continue;
-            
-            // Convert PDF page to high-quality image
-            UIImage *pageImage = [self imageFromPDFPage:pdfPage dpi:pdfDpi];
-            if (!pageImage) continue;
-            
-            // Optionally preprocess for scanned/low-quality PDFs
-            // For clean digital PDFs, preprocessing may reduce quality
-            UIImage *imageToRecognize = pageImage;
-            if (preprocessImages) {
-                RCTLogInfo(@"Preprocessing PDF page %ld", (long)i);
-                imageToRecognize = [self preprocessImageForOCR:pageImage] ?: pageImage;
-            }
-            
-            NSDictionary *pageResult = [self recognizeTextInImage:imageToRecognize
-                                                        pageNumber:i
-                                                         languages:languages
-                                                  recognitionLevel:recognitionLevel
-                                                useFastRecognition:useFastRecognition];
-            
-            if (pageResult) {
+            if (!pdfPage) { continue; }
+
+            // Try searchable text extraction first
+            NSString *pageText = pdfPage.string;
+            BOOL hasSearchableText = (pageText != nil && pageText.length > 0);
+
+            if (hasSearchableText) {
+                // Build elements by line using PDF selections
+                CGRect pageRect = [pdfPage boundsForBox:kPDFDisplayBoxMediaBox];
+                NSMutableArray *elements = [NSMutableArray array];
+
+                PDFSelection *entireSelection = [pdfPage selectionForEntirePage];
+                NSArray<PDFSelection *> *lineSelections = [entireSelection selectionsByLine];
+
+                for (PDFSelection *sel in lineSelections) {
+                    NSString *lineText = sel.string ?: @"";
+                    if (lineText.length == 0) { continue; }
+                    CGRect bounds = [sel boundsForPage:pdfPage];
+
+                    // Normalize to [0,1] with top-left origin
+                    CGFloat normX = bounds.origin.x / pageRect.size.width;
+                    CGFloat normY = 1.0 - ((bounds.origin.y + bounds.size.height) / pageRect.size.height);
+                    CGFloat normW = bounds.size.width / pageRect.size.width;
+                    CGFloat normH = bounds.size.height / pageRect.size.height;
+
+                    NSDictionary *element = @{
+                        @"text": lineText,
+                        @"confidence": @1.0, // Text comes from PDF, assume perfect
+                        @"level": @"line",
+                        @"boundingBox": @{
+                            @"x": @(normX),
+                            @"y": @(normY),
+                            @"width": @(normW),
+                            @"height": @(normH),
+                            @"absoluteBox": @{
+                                @"x": @(bounds.origin.x),
+                                @"y": @(pageRect.size.height - bounds.origin.y - bounds.size.height),
+                                @"width": @(bounds.size.width),
+                                @"height": @(bounds.size.height)
+                            }
+                        }
+                    };
+                    [elements addObject:element];
+                }
+
+                NSDictionary *pageResult = @{
+                    @"pageNumber": @(i),
+                    @"dimensions": @{ @"width": @(pageRect.size.width), @"height": @(pageRect.size.height) },
+                    @"elements": elements,
+                    @"fullText": pageText ?: @""
+                };
+
                 [allPages addObject:pageResult];
+                if (pageText.length > 0) {
+                    [fullText appendString:pageText];
+                    [fullText appendString:@"\n\n"];
+                }
+
+            } else {
+                // Fallback to OCR for image-based/scanned PDFs
+                CGSize targetSize = CGSizeMake(2000, 2800); // High-quality thumbnail
+                UIImage *thumb = [pdfPage thumbnailOfSize:targetSize forBox:kPDFDisplayBoxMediaBox];
+                if (!thumb) { continue; }
+
+                NSDictionary *pageResult = [self recognizeTextInImage:thumb
+                                                            pageNumber:i
+                                                             languages:languages
+                                                      recognitionLevel:@"line"
+                                                    useFastRecognition:useFastRecognition];
+                if (pageResult) {
+                    [allPages addObject:pageResult];
+                    NSString *ptext = pageResult[@"fullText"];
+                    if (ptext.length > 0) {
+                        [fullText appendString:ptext];
+                        [fullText appendString:@"\n\n"];
+                    }
+                }
             }
         }
     }
-    
-    // Combine results
-    NSMutableString *fullText = [NSMutableString string];
-    for (NSDictionary *page in allPages) {
-        if (page[@"fullText"]) {
-            [fullText appendString:page[@"fullText"]];
-            [fullText appendString:@"\n\n"];
-        }
-    }
-    
+
     NSDictionary *result = @{
         @"success": @YES,
         @"pages": allPages,
         @"totalPages": @(pageCount),
-        @"fullText": fullText
+        @"fullText": [fullText stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]]
     };
-    
+
     dispatch_async(dispatch_get_main_queue(), ^{
         self.callback(@[result]);
     });
