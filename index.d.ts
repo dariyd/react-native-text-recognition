@@ -17,7 +17,12 @@ export interface TextRecognitionOptions {
   
   /**
    * Recognition level: 'word' | 'line' | 'block'
-   * Default: 'word'
+   * 
+   * Smart defaults (automatically applied):
+   * - PDFs: 'line' (better for documents, handles scanned PDFs)
+   * - Images: 'word' (more precise for photos)
+   * 
+   * Default: 'word' for images, 'line' for PDFs
    */
   recognitionLevel?: 'word' | 'line' | 'block';
   
@@ -35,9 +40,19 @@ export interface TextRecognitionOptions {
   
   /**
    * For PDFs: DPI for converting PDF to images
-   * Default: 300
+   * Higher = better quality but slower
+   * Default: 400 (high quality - optimized for most documents)
+   * Advanced: 600+ for very small text (slower)
    */
   pdfDpi?: number;
+
+  /**
+   * Apply preprocessing (grayscale + contrast boost) to PDF pages
+   * - true: Good for scanned/low-quality PDFs
+   * - false: Better for clean digital PDFs (preprocessing may reduce accuracy)
+   * Default: false
+   */
+  preprocessImages?: boolean;
 }
 
 export interface TextBoundingBox {

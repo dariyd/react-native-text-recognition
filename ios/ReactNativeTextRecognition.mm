@@ -89,12 +89,29 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
     
     // Parse options
     NSArray *languages = options[@"languages"];
-    NSString *recognitionLevel = options[@"recognitionLevel"] ?: @"word";
     BOOL useFastRecognition = [options[@"useFastRecognition"] boolValue];
     NSInteger maxPages = options[@"maxPages"] ? [options[@"maxPages"] integerValue] : NSIntegerMax;
-    NSInteger pdfDpi = options[@"pdfDpi"] ? [options[@"pdfDpi"] integerValue] : 300;
+    // Use 400 DPI by default for high-quality PDF rendering (previously 300)
+    NSInteger pdfDpi = options[@"pdfDpi"] ? [options[@"pdfDpi"] integerValue] : 400;
+    BOOL preprocessImages = options[@"preprocessImages"] ? [options[@"preprocessImages"] boolValue] : NO;
     
     RCTLogInfo(@"Text recognition started for file: %@", fileUrl);
+    
+    // Smart defaults: detect if file is a PDF for optimized settings
+    BOOL isPDF = [fileUrl.lowercaseString hasSuffix:@".pdf"];
+    
+    // Apply PDF-optimized defaults when not explicitly specified
+    NSString *recognitionLevel;
+    if (options[@"recognitionLevel"]) {
+        recognitionLevel = options[@"recognitionLevel"];
+    } else {
+        // PDFs work better with 'line' recognition (handles scanned docs better)
+        // Images work better with 'word' recognition (more precise)
+        recognitionLevel = isPDF ? @"line" : @"word";
+    }
+    
+    RCTLogInfo(@"Recognition mode: %@ (PDF: %@, level: %@)", 
+               fileUrl.lastPathComponent, isPDF ? @"YES" : @"NO", recognitionLevel);
     
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         @try {
@@ -113,7 +130,8 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
                               pdfDpi:pdfDpi
                            languages:languages
                     recognitionLevel:recognitionLevel
-                  useFastRecognition:useFastRecognition];
+                  useFastRecognition:useFastRecognition
+                   preprocessImages:preprocessImages];
             } else {
                 [self processImageFile:url
                              languages:languages
@@ -193,6 +211,7 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
              languages:(NSArray *)languages
       recognitionLevel:(NSString *)recognitionLevel
     useFastRecognition:(BOOL)useFastRecognition
+      preprocessImages:(BOOL)preprocessImages
 API_AVAILABLE(ios(11.0))
 {
     PDFDocument *pdfDocument = [[PDFDocument alloc] initWithURL:url];
@@ -205,6 +224,9 @@ API_AVAILABLE(ios(11.0))
     NSInteger pageCount = pdfDocument.pageCount;
     NSInteger pagesToProcess = MIN(pageCount, maxPages);
     
+    RCTLogInfo(@"Processing PDF: %ld pages, DPI: %ld, preprocess: %@", 
+               (long)pagesToProcess, (long)pdfDpi, preprocessImages ? @"YES" : @"NO");
+    
     NSMutableArray *allPages = [NSMutableArray array];
     
     for (NSInteger i = 0; i < pagesToProcess; i++) {
@@ -212,14 +234,19 @@ API_AVAILABLE(ios(11.0))
             PDFPage *pdfPage = [pdfDocument pageAtIndex:i];
             if (!pdfPage) continue;
             
-            // Convert PDF page to image
+            // Convert PDF page to high-quality image
             UIImage *pageImage = [self imageFromPDFPage:pdfPage dpi:pdfDpi];
             if (!pageImage) continue;
             
-            // Recognize text in this page
-            // Preprocess image for better OCR on scanned PDFs: grayscale + increase contrast
-            UIImage *preprocessed = [self preprocessImageForOCR:pageImage];
-            NSDictionary *pageResult = [self recognizeTextInImage:preprocessed ?: pageImage
+            // Optionally preprocess for scanned/low-quality PDFs
+            // For clean digital PDFs, preprocessing may reduce quality
+            UIImage *imageToRecognize = pageImage;
+            if (preprocessImages) {
+                RCTLogInfo(@"Preprocessing PDF page %ld", (long)i);
+                imageToRecognize = [self preprocessImageForOCR:pageImage] ?: pageImage;
+            }
+            
+            NSDictionary *pageResult = [self recognizeTextInImage:imageToRecognize
                                                         pageNumber:i
                                                          languages:languages
                                                   recognitionLevel:recognitionLevel
@@ -259,42 +286,60 @@ API_AVAILABLE(ios(11.0))
     
     CGSize renderSize = CGSizeMake(pageRect.size.width * scale, pageRect.size.height * scale);
     
-    UIGraphicsBeginImageContextWithOptions(renderSize, YES, 1.0);
+    RCTLogInfo(@"Rendering PDF page at %ldx%ld px (DPI: %ld, scale: %.2fx)", 
+               (long)renderSize.width, (long)renderSize.height, (long)dpi, scale);
+    
+    // Use 0.0 for scale to use device's native scale, improves quality
+    UIGraphicsBeginImageContextWithOptions(renderSize, YES, 0.0);
     CGContextRef context = UIGraphicsGetCurrentContext();
+    
+    // Set high-quality rendering
+    CGContextSetInterpolationQuality(context, kCGInterpolationHigh);
+    CGContextSetRenderingIntent(context, kCGRenderingIntentDefault);
+    CGContextSetShouldAntialias(context, true);
+    CGContextSetAllowsAntialiasing(context, true);
     
     // Fill background with white
     CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
     CGContextFillRect(context, CGRectMake(0, 0, renderSize.width, renderSize.height));
     
-    // Scale and render PDF page
+    // Scale and render PDF page with high quality
     CGContextScaleCTM(context, scale, scale);
     [pdfPage drawWithBox:kPDFDisplayBoxMediaBox toContext:context];
     
     UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
     
+    RCTLogInfo(@"PDF page rendered, image scale: %.1fx", image.scale);
+    
     return image;
 }
 
-// Basic preprocessing to improve OCR: grayscale and slight contrast boost
+// Preprocessing to improve OCR on scanned/low-quality PDFs
+// Converts to grayscale and increases contrast
 - (UIImage *)preprocessImageForOCR:(UIImage *)image
 {
     CIImage *input = [[CIImage alloc] initWithImage:image];
     if (!input) return image;
 
-    // Convert to grayscale
+    // Convert to grayscale for better OCR
     CIFilter *mono = [CIFilter filterWithName:@"CIPhotoEffectMono"];
     [mono setValue:input forKey:kCIInputImageKey];
     CIImage *monoImage = mono.outputImage ?: input;
 
-    // Increase contrast slightly
+    // Increase contrast more aggressively for scanned documents
     CIFilter *contrast = [CIFilter filterWithName:@"CIColorControls"];
     [contrast setValue:monoImage forKey:kCIInputImageKey];
-    [contrast setValue:@(1.1) forKey:kCIInputContrastKey];
+    [contrast setValue:@(1.3) forKey:kCIInputContrastKey];  // Increased from 1.1 to 1.3
+    [contrast setValue:@(0.05) forKey:kCIInputBrightnessKey]; // Slight brightness boost
     [contrast setValue:@(0.0) forKey:kCIInputSaturationKey];
     CIImage *output = contrast.outputImage ?: monoImage;
 
-    CIContext *context = [CIContext context];
+    // Use high-quality context for rendering
+    CIContext *context = [CIContext contextWithOptions:@{
+        kCIContextUseSoftwareRenderer: @NO,
+        kCIContextPriorityRequestLow: @NO
+    }];
     CGImageRef cgimg = [context createCGImage:output fromRect:[output extent]];
     if (!cgimg) return image;
     UIImage *result = [UIImage imageWithCGImage:cgimg scale:image.scale orientation:image.imageOrientation];

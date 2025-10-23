@@ -7,12 +7,13 @@ Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit 
 
 ## Features
 
+- 🎯 **Smart Defaults**: Automatically detects file types (PDF/image) and applies optimal settings - no configuration needed!
 - 📱 **Cross-platform**: iOS 13+ and Android 21+
 - 🚀 **New Architecture Ready**: Full support for React Native new architecture (Fabric/TurboModules) on iOS, old architecture support on Android
-- 🔤 **Multi-language Support**: Recognizes text in 100+ languages
-- 📄 **PDF Support**: Extract text from PDF documents (both platforms)
+- 🔤 **Multi-language Support**: Recognizes text in 100+ languages with automatic detection
+- 📄 **PDF Support**: High-quality PDF text extraction (400 DPI by default) on both platforms
 - 🎯 **Flexible Results**: Get text with bounding boxes, confidence scores, and coordinates
-- 🔍 **Recognition Levels**: Choose between word, line, or block level recognition
+- 🔍 **Recognition Levels**: Automatic smart defaults, or choose between word, line, or block level
 - ⚡ **Modern APIs**: 
   - iOS: Uses VNRecognizeTextRequestRevision3 (iOS 16+) with automatic fallback
   - Android: Uses Google ML Kit Text Recognition v2
@@ -68,17 +69,24 @@ Add to your `AndroidManifest.xml` (if scanning from camera):
 
 ## Usage
 
-### Basic Usage
+### Basic Usage - Just Works! 🎯
+
+The library automatically detects file types and applies optimal settings:
 
 ```javascript
 import { recognizeText } from 'react-native-text-recognition';
 
-// Recognize text from an image
+// Works for both images and PDFs with smart defaults
 const result = await recognizeText('file:///path/to/image.jpg');
+const pdfResult = await recognizeText('file:///path/to/document.pdf');
 
 console.log(result.fullText); // All recognized text
 console.log(result.pages); // Detailed page-by-page results
 ```
+
+**Smart defaults behind the scenes:**
+- 📄 **PDFs**: 400 DPI + line recognition + auto language
+- 🖼️ **Images**: Word recognition + auto language
 
 ### With Options
 
@@ -89,12 +97,13 @@ const result = await recognizeText('file:///path/to/image.jpg', {
   recognitionLevel: 'word',
 });
 
-// Or specify known languages for better accuracy
-const result = await recognizeText('file:///path/to/document.pdf', {
-  languages: ['en', 'es', 'fr'], // Language hints (optional)
-  recognitionLevel: 'word', // 'word' | 'line' | 'block'
-  maxPages: 10, // For PDFs: limit number of pages
-  pdfDpi: 300, // For PDFs: resolution for conversion
+// PDFs are automatically optimized (400 DPI + line recognition)
+const result = await recognizeText('file:///path/to/document.pdf');
+// That's it! Or customize if needed:
+const customResult = await recognizeText('file:///path/to/document.pdf', {
+  languages: ['en', 'es'],  // Language hints (optional, auto-detects by default)
+  maxPages: 10,             // Limit number of pages
+  pdfDpi: 600,              // Higher quality (optional, 400 is default)
 });
 
 // Access detailed results
@@ -129,6 +138,100 @@ console.log('Text recognition available:', available);
 const languages = await getSupportedLanguages();
 console.log('Supported languages:', languages);
 ```
+
+## PDF Recognition - Smart Defaults
+
+**The library automatically detects PDFs and applies optimized settings!** No configuration needed.
+
+### Automatic PDF Optimization:
+- ✅ **400 DPI rendering** (high quality)
+- ✅ **Line-level recognition** (better for PDFs than word-level)
+- ✅ **Auto language detection** (iOS 16+)
+
+```javascript
+// PDFs are automatically optimized - just call recognizeText!
+const result = await recognizeText(pdfUri);
+// Behind the scenes: 400 DPI + line recognition + auto language
+```
+
+### How It Works:
+
+The library detects the file extension and automatically applies the best settings:
+
+| File Type | Recognition Level | DPI | Notes |
+|-----------|------------------|-----|-------|
+| **PDF** | `line` (auto) | 400 | Optimized for documents |
+| **Image** (jpg, png) | `word` (auto) | N/A | Optimized for photos |
+
+**You can still override any setting:**
+
+```javascript
+const result = await recognizeText(pdfUri, {
+  recognitionLevel: 'word',  // Override to word-level
+  pdfDpi: 600,              // Override to higher DPI
+  languages: ['en', 'it'],  // Override auto-detect
+});
+```
+
+### Advanced: Need Even Higher Quality?
+
+For PDFs with very small text, you can increase the DPI:
+
+```javascript
+const result = await recognizeText(pdfUri, {
+  pdfDpi: 600,  // Even higher quality (slower)
+  languages: [],
+});
+```
+
+**DPI Guidelines:**
+- **400 DPI**: High quality for most documents ✅ **(default)**
+- **600+ DPI**: Very small text or maximum quality (slower)
+
+### Troubleshooting: Scanned PDFs
+
+### 1. **Enable Preprocessing for Scanned PDFs**
+
+If your PDF is a scanned image (not digital text), enable preprocessing:
+
+```javascript
+const result = await recognizeText(scannedPdfUri, {
+  pdfDpi: 400,
+  preprocessImages: true,  // Grayscale + contrast boost
+  recognitionLevel: 'line', // Better for scanned documents
+});
+```
+
+**⚠️ Warning**: Don't use `preprocessImages: true` for clean digital PDFs - it will REDUCE accuracy!
+
+### 2. **Adjust Recognition Level**
+
+- `'word'` (default): Best for most documents
+- `'line'`: Better for scanned PDFs or low-quality images
+- `'block'`: Faster but less detailed
+
+### 3. **Complete Example for Scanned PDFs**
+
+```javascript
+// Scanned/Low-quality PDF
+const result = await recognizeText(scannedPdfUri, {
+  languages: ['en', 'it'], // Language hints help
+  pdfDpi: 500,             // Even higher for scans (optional)
+  recognitionLevel: 'line', // Better for scans
+  preprocessImages: true,   // Enable for scanned PDFs
+});
+```
+
+**Note:** Most digital PDFs work perfectly at the default 400 DPI without any configuration!
+
+### Common Issues:
+
+| Problem | Solution |
+|---------|----------|
+| Text is jumbled/wrong | Try `pdfDpi: 600` or `recognitionLevel: 'line'` |
+| Missing text | Enable `preprocessImages: true` for scanned PDFs |
+| Scanned PDF not working | Set `preprocessImages: true` and `recognitionLevel: 'line'` |
+| Slow processing | Default is optimized; reduce to `pdfDpi: 300` if needed |
 
 ## API Reference
 
@@ -195,6 +298,58 @@ interface RecognizedTextElement {
 - `detectText(imageUrl, callback?)`: Legacy method for backward compatibility
 - `isAvailable()`: Check if text recognition is available
 - `getSupportedLanguages()`: Get list of supported language codes
+
+## Automatic Language Detection
+
+The SDK supports automatic language detection - **you don't need to specify languages**:
+
+### iOS 16+
+✅ **Fully automatic** - Detects and recognizes 100+ languages automatically
+- Set `languages: []` or omit the option entirely
+- Automatically detects: Latin, CJK (Chinese/Japanese/Korean), Arabic, Hebrew, Cyrillic, Indic scripts, and more
+- Perfect for mixed-language documents
+- Uses `automaticallyDetectsLanguage` with `VNRecognizeTextRequestRevision3`
+
+```javascript
+// Will auto-detect English, Chinese, Arabic, etc.
+const result = await recognizeText(imageUri, {
+  languages: [], // Auto-detect
+});
+```
+
+### iOS 13-15
+⚠️ **Limited auto-detection** - Works best with common scripts
+- Defaults to English + common European languages
+- May need language hints for non-Latin scripts
+
+### Android
+⚠️ **Script-based** - Better with language hints
+- Defaults to Latin script recognizer
+- For Chinese/Japanese/Korean/Devanagari: provide language hints
+
+### When to Specify Languages?
+
+**Specify languages for:**
+- ✅ Better accuracy when you know the language(s)
+- ✅ Faster processing (skips detection)
+- ✅ Non-Latin scripts on older iOS or Android
+
+**Use auto-detection for:**
+- ✅ Unknown language documents
+- ✅ Mixed-language content
+- ✅ iOS 16+ with maximum flexibility
+
+```javascript
+// Known languages = better accuracy
+const result = await recognizeText(imageUri, {
+  languages: ['it', 'en'], // Italian + English
+});
+
+// Unknown languages = auto-detect
+const result = await recognizeText(imageUri, {
+  languages: [], // Let SDK detect
+});
+```
 
 ## Supported Languages
 

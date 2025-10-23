@@ -40,12 +40,6 @@ class ReactNativeTextRecognitionModule(reactContext: ReactApplicationContext) :
                 emptyList()
             }
             
-            val recognitionLevel = if (options.hasKey("recognitionLevel")) {
-                options.getString("recognitionLevel") ?: "word"
-            } else {
-                "word"
-            }
-            
             val maxPages = if (options.hasKey("maxPages")) {
                 options.getInt("maxPages")
             } else {
@@ -55,12 +49,23 @@ class ReactNativeTextRecognitionModule(reactContext: ReactApplicationContext) :
             val pdfDpi = if (options.hasKey("pdfDpi")) {
                 options.getInt("pdfDpi")
             } else {
-                300
+                400  // High quality by default (increased from 300)
             }
 
-            // Determine file type
+            // Smart defaults: detect file type for optimized settings
             val path = uri.path ?: ""
             val isPdf = path.lowercase().endsWith(".pdf")
+            
+            // Apply PDF-optimized defaults when not explicitly specified
+            val recognitionLevel = if (options.hasKey("recognitionLevel")) {
+                options.getString("recognitionLevel") ?: "word"
+            } else {
+                // PDFs work better with 'line' recognition (handles scanned docs better)
+                // Images work better with 'word' recognition (more precise)
+                if (isPdf) "line" else "word"
+            }
+            
+            Log.d(NAME, "Recognition mode: $path (PDF: $isPdf, level: $recognitionLevel)")
 
             if (isPdf) {
                 processPdfFile(uri, languages, recognitionLevel, maxPages, pdfDpi, callback)
@@ -212,14 +217,15 @@ class ReactNativeTextRecognitionModule(reactContext: ReactApplicationContext) :
             for (i in 0 until pagesToProcess) {
                 val page = pdfRenderer.openPage(i)
                 
-                // Calculate dimensions based on DPI
+                // Calculate dimensions based on DPI (default 400 for high quality)
                 val scale = pdfDpi / 72f
                 val width = (page.width * scale).toInt()
                 val height = (page.height * scale).toInt()
                 
-                // Render page to bitmap
+                // Render page to high-quality bitmap
                 val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                // Use RENDER_MODE_FOR_PRINT for highest quality
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
                 page.close()
                 
                 // Recognize text in bitmap

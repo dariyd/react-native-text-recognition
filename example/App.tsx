@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import {launchImageLibrary, Asset} from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
-// import Svg, {Rect} from 'react-native-svg';
+import Svg, {Rect} from 'react-native-svg';
 import {recognizeText, isAvailable, getSupportedLanguages} from '@dariyd/react-native-text-recognition';
 import type {
   TextRecognitionResult,
@@ -43,7 +43,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<ProcessedImage | null>(null);
   const [result, setResult] = useState<TextRecognitionResult | null>(null);
-  // Boxes are not rendered anymore; keep state removed
+  const [showBoxes, setShowBoxes] = useState(true);
 
   const backgroundColor = isDarkMode ? '#000' : '#fff';
   const textColor = isDarkMode ? '#fff' : '#000';
@@ -124,7 +124,7 @@ function App() {
         if (asset?.width && asset?.height) {
           return Promise.resolve({w: asset.width, h: asset.height});
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve, _reject) => {
           let done = false;
           const timer = setTimeout(() => {
             if (!done) {
@@ -142,7 +142,7 @@ function App() {
                 resolve({w, h});
               }
             },
-            e => {
+            _e => {
               if (!done) {
                 done = true;
                 clearTimeout(timer);
@@ -175,14 +175,12 @@ function App() {
       );
 
       try {
-        // Auto-detect languages on iOS 16+ by passing empty array or omitting languages
-        // Or specify known languages for better accuracy: ['en', 'it', 'es']
-        console.log('Starting OCR with auto language detection');
+        // Smart defaults: PDFs automatically use 400 DPI + line recognition
+        // Images automatically use word recognition
+        console.log('Starting OCR with smart defaults');
+        
         const ocrResult = await Promise.race([
-          recognizeText(uri, {
-            languages: [], // Empty = auto-detect on iOS 16+, or specify: ['en', 'it']
-            recognitionLevel: 'word',
-          }),
+          recognizeText(uri), // That's it! Smart defaults handle everything
           timeout,
         ]);
 
@@ -207,8 +205,46 @@ function App() {
     }
   };
 
-  // Boxes are disabled in demo; render nothing
-  const renderBoundingBoxes = () => null;
+  const renderBoundingBoxes = () => {
+    if (!showBoxes || !result?.pages?.[0]?.elements || !image) {
+      return null;
+    }
+
+    const page = result.pages[0];
+    const {displayWidth, displayHeight} = image;
+
+    return (
+      <Svg
+        style={StyleSheet.absoluteFill}
+        width={displayWidth}
+        height={displayHeight}
+        viewBox={`0 0 ${displayWidth} ${displayHeight}`}>
+        {page.elements.map((element, index) => {
+          const box = element.boundingBox;
+          
+          // Convert normalized coordinates (0-1) to display coordinates
+          const x = box.x * displayWidth;
+          const y = box.y * displayHeight;
+          const width = box.width * displayWidth;
+          const height = box.height * displayHeight;
+
+          return (
+            <Rect
+              key={`box-${index}`}
+              x={x}
+              y={y}
+              width={width}
+              height={height}
+              stroke="#00FF00"
+              strokeWidth="2"
+              fill="none"
+              opacity={0.8}
+            />
+          );
+        })}
+      </Svg>
+    );
+  };
 
   const renderRecognizedText = () => {
     if (!result?.pages?.[0]) {
@@ -298,7 +334,15 @@ function App() {
             <Text style={styles.buttonTextDark}>ℹ️ Check Availability</Text>
           </TouchableOpacity>
 
-          {/* Toggle removed since boxes are not rendered */}
+          {result && (
+            <TouchableOpacity
+              style={[styles.button, styles.toggleButton]}
+              onPress={() => setShowBoxes(!showBoxes)}>
+              <Text style={styles.buttonText}>
+                {showBoxes ? '👁️ Hide Boxes' : '👁️‍🗨️ Show Boxes'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Loading Indicator */}
