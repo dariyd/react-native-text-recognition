@@ -15,6 +15,35 @@ using namespace facebook::react;
 
 @interface ReactNativeTextRecognition ()
 @property (nonatomic, strong) RCTResponseSenderBlock callback;
+// Forward declarations to satisfy compiler for private methods
+- (void)processPDFFile:(NSURL *)url
+               options:(NSDictionary *)options
+              maxPages:(NSInteger)maxPages
+                pdfDpi:(NSInteger)pdfDpi
+             languages:(NSArray *)languages
+      recognitionLevel:(NSString *)recognitionLevel
+    useFastRecognition:(BOOL)useFastRecognition
+      preprocessImages:(BOOL)preprocessImages API_AVAILABLE(ios(11.0));
+
+- (void)processImageFile:(NSURL *)url
+               languages:(NSArray *)languages
+        recognitionLevel:(NSString *)recognitionLevel
+      useFastRecognition:(BOOL)useFastRecognition;
+
+- (NSDictionary *)recognizeTextInImage:(UIImage *)image
+                            pageNumber:(NSInteger)pageNumber
+                             languages:(NSArray *)languages
+                      recognitionLevel:(NSString *)recognitionLevel
+                    useFastRecognition:(BOOL)useFastRecognition;
+
+- (VNRecognizeTextRequest *)createTextRecognitionRequest:(NSArray *)languages
+                                        recognitionLevel:(NSString *)recognitionLevel
+                                      useFastRecognition:(BOOL)useFastRecognition;
+
+- (NSDictionary *)formatRecognitionResults:(NSArray *)results
+                                pageNumber:(NSInteger)pageNumber
+                            imageDimensions:(CGSize)dimensions
+                          recognitionLevel:(NSString *)recognitionLevel;
 @end
 
 @implementation ReactNativeTextRecognition
