@@ -23,5 +23,5 @@ export interface Spec extends TurboModule {
   getSupportedLanguages(): Promise<string[]>;
 }
 
-export default TurboModuleRegistry.getEnforcing<Spec>('ReactNativeTextRecognition');
+export default TurboModuleRegistry.get<Spec>('ReactNativeTextRecognition');
 

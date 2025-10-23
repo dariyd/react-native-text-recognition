@@ -11,6 +11,8 @@
 #import <React/RCTConvert.h>
 #endif
 
+using namespace facebook::react;
+
 @interface ReactNativeTextRecognition ()
 @property (nonatomic, strong) RCTResponseSenderBlock callback;
 @end
@@ -174,7 +176,9 @@ API_AVAILABLE(ios(11.0))
             if (!pageImage) continue;
             
             // Recognize text in this page
-            NSDictionary *pageResult = [self recognizeTextInImage:pageImage
+            // Preprocess image for better OCR on scanned PDFs: grayscale + increase contrast
+            UIImage *preprocessed = [self preprocessImageForOCR:pageImage];
+            NSDictionary *pageResult = [self recognizeTextInImage:preprocessed ?: pageImage
                                                         pageNumber:i
                                                          languages:languages
                                                   recognitionLevel:recognitionLevel
@@ -231,6 +235,32 @@ API_AVAILABLE(ios(11.0))
     return image;
 }
 
+// Basic preprocessing to improve OCR: grayscale and slight contrast boost
+- (UIImage *)preprocessImageForOCR:(UIImage *)image
+{
+    CIImage *input = [[CIImage alloc] initWithImage:image];
+    if (!input) return image;
+
+    // Convert to grayscale
+    CIFilter *mono = [CIFilter filterWithName:@"CIPhotoEffectMono"];
+    [mono setValue:input forKey:kCIInputImageKey];
+    CIImage *monoImage = mono.outputImage ?: input;
+
+    // Increase contrast slightly
+    CIFilter *contrast = [CIFilter filterWithName:@"CIColorControls"];
+    [contrast setValue:monoImage forKey:kCIInputImageKey];
+    [contrast setValue:@(1.1) forKey:kCIInputContrastKey];
+    [contrast setValue:@(0.0) forKey:kCIInputSaturationKey];
+    CIImage *output = contrast.outputImage ?: monoImage;
+
+    CIContext *context = [CIContext context];
+    CGImageRef cgimg = [context createCGImage:output fromRect:[output extent]];
+    if (!cgimg) return image;
+    UIImage *result = [UIImage imageWithCGImage:cgimg scale:image.scale orientation:image.imageOrientation];
+    CGImageRelease(cgimg);
+    return result;
+}
+
 - (NSDictionary *)recognizeTextInImage:(UIImage *)image
                             pageNumber:(NSInteger)pageNumber
                              languages:(NSArray *)languages
@@ -270,7 +300,7 @@ API_AVAILABLE(ios(11.0))
     VNRecognizeTextRequest *request;
     
     if (@available(iOS 16.0, *)) {
-        // iOS 16+ uses the latest available revision (Rev3) by default
+        // iOS 16+ uses the latest available revision by default
         request = [[VNRecognizeTextRequest alloc] initWithCompletionHandler:nil];
         
         // Set recognition level
@@ -280,9 +310,13 @@ API_AVAILABLE(ios(11.0))
             request.recognitionLevel = VNRequestTextRecognitionLevelAccurate;
         }
         
-        // Set languages if specified
+        // Prefer explicit language hints when provided
         if (languages && languages.count > 0) {
             request.recognitionLanguages = languages;
+        }
+        // Enable automatic language detection for mixed-language documents
+        if (@available(iOS 16.0, *)) {
+            request.automaticallyDetectsLanguage = YES;
         }
         
         // Enable automatic language correction
