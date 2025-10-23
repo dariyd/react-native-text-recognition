@@ -83,8 +83,15 @@ console.log(result.pages); // Detailed page-by-page results
 ### With Options
 
 ```javascript
+// Auto-detect languages (iOS 16+ recommended)
+const result = await recognizeText('file:///path/to/image.jpg', {
+  languages: [], // Empty array = auto-detect on iOS 16+
+  recognitionLevel: 'word',
+});
+
+// Or specify known languages for better accuracy
 const result = await recognizeText('file:///path/to/document.pdf', {
-  languages: ['en', 'es', 'fr'], // Preferred languages
+  languages: ['en', 'es', 'fr'], // Language hints (optional)
   recognitionLevel: 'word', // 'word' | 'line' | 'block'
   maxPages: 10, // For PDFs: limit number of pages
   pdfDpi: 300, // For PDFs: resolution for conversion

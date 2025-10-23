@@ -28,7 +28,7 @@ RCT_EXPORT_MODULE()
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
     (const facebook::react::ObjCTurboModule::InitParams &)params {
-    return std::make_shared<facebook::react::NativeReactNativeTextRecognitionSpecJSI>(params);
+    return std::make_shared<facebook::react::NativeTextRecognitionSpecJSI>(params);
 }
 #endif
 
@@ -142,7 +142,48 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
     
     if (error) {
         [self sendError:[NSString stringWithFormat:@"Request error: %@", error.localizedDescription]];
+        return;
     }
+    
+    // Get image dimensions for bounding boxes
+    NSArray *results = request.results;
+    if (results == nil || results.count == 0) {
+        // Empty results - still success
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSDictionary *response = @{
+                @"success": @YES,
+                @"pages": @[],
+                @"totalPages": @0,
+                @"fullText": @""
+            };
+            self.callback(@[response]);
+        });
+        return;
+    }
+    
+    // Get image size
+    CIImage *ciImage = [[CIImage alloc] initWithContentsOfURL:url];
+    CGSize imageSize = ciImage ? ciImage.extent.size : CGSizeMake(1024, 1024);
+    
+    NSDictionary *pageResult = [self formatRecognitionResults:results
+                                                    pageNumber:0
+                                                imageDimensions:imageSize
+                                              recognitionLevel:recognitionLevel];
+    
+    NSMutableString *fullText = [NSMutableString string];
+    if (pageResult[@"fullText"]) {
+        [fullText appendString:pageResult[@"fullText"]];
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSDictionary *response = @{
+            @"success": @YES,
+            @"pages": @[pageResult],
+            @"totalPages": @1,
+            @"fullText": fullText
+        };
+        self.callback(@[response]);
+    });
 }
 
 - (void)processPDFFile:(NSURL *)url

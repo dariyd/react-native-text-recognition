@@ -3,7 +3,15 @@
 export interface TextRecognitionOptions {
   /**
    * Recognition language hints (e.g., ['en', 'es', 'fr'])
-   * Default: automatic language detection
+   * 
+   * - Empty array [] or omitted: Automatic language detection (iOS 16+ recommended)
+   * - Specific languages: Use as hints for better accuracy
+   * 
+   * iOS 16+: Supports 100+ languages with automatic detection
+   * iOS 13-15: Limited to ~20 languages, works best with Latin scripts
+   * Android: Defaults to Latin script if not specified
+   * 
+   * Default: [] (automatic detection)
    */
   languages?: string[];
   

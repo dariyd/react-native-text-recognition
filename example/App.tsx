@@ -18,9 +18,9 @@ import {
   Dimensions,
   useColorScheme,
 } from 'react-native';
-import {launchImageLibrary} from 'react-native-image-picker';
+import {launchImageLibrary, Asset} from 'react-native-image-picker';
 import DocumentPicker from 'react-native-document-picker';
-import Svg, {Rect} from 'react-native-svg';
+// import Svg, {Rect} from 'react-native-svg';
 import {recognizeText, isAvailable, getSupportedLanguages} from '@dariyd/react-native-text-recognition';
 import type {
   TextRecognitionResult,
@@ -43,7 +43,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<ProcessedImage | null>(null);
   const [result, setResult] = useState<TextRecognitionResult | null>(null);
-  const [showBoxes, setShowBoxes] = useState(true);
+  // Boxes are not rendered anymore; keep state removed
 
   const backgroundColor = isDarkMode ? '#000' : '#fff';
   const textColor = isDarkMode ? '#fff' : '#000';
@@ -81,7 +81,7 @@ function App() {
 
       const asset = result.assets?.[0];
       if (asset?.uri) {
-        await processImage(asset.uri);
+        await processImage(asset.uri, asset);
       }
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -110,7 +110,7 @@ function App() {
     }
   };
 
-  const processImage = async (uri: string) => {
+  const processImage = async (uri: string, asset?: Asset) => {
     setLoading(true);
     setImage(null);
     setResult(null);
@@ -118,49 +118,88 @@ function App() {
     try {
       console.log('Processing:', uri);
 
-      // Get image dimensions
-      Image.getSize(
-        uri,
-        async (width, height) => {
-          // Calculate display dimensions
-          const aspectRatio = height / width;
-          const displayWidth = Math.min(width, IMAGE_MAX_WIDTH);
-          const displayHeight = displayWidth * aspectRatio;
-
-          setImage({
+      // Helper to get size with fallbacks to avoid eternal spinner on some URIs (e.g., ph://)
+      const getSize = (): Promise<{w: number; h: number}> => {
+        // Prefer asset-provided size if available
+        if (asset?.width && asset?.height) {
+          return Promise.resolve({w: asset.width, h: asset.height});
+        }
+        return new Promise((resolve, reject) => {
+          let done = false;
+          const timer = setTimeout(() => {
+            if (!done) {
+              done = true;
+              // Fallback size (square) to allow UI to proceed
+              resolve({w: IMAGE_MAX_WIDTH, h: IMAGE_MAX_WIDTH});
+            }
+          }, 5000);
+          Image.getSize(
             uri,
-            width,
-            height,
-            displayWidth,
-            displayHeight,
-          });
+            (w, h) => {
+              if (!done) {
+                done = true;
+                clearTimeout(timer);
+                resolve({w, h});
+              }
+            },
+            e => {
+              if (!done) {
+                done = true;
+                clearTimeout(timer);
+                resolve({w: IMAGE_MAX_WIDTH, h: IMAGE_MAX_WIDTH});
+              }
+            },
+          );
+        });
+      };
 
-          // Perform OCR
-          const ocrResult = await recognizeText(uri, {
-            languages: ['en'],
-            recognitionLevel: 'word',
-          });
+      const {w, h} = await getSize();
+      const aspectRatio = h / w;
+      const displayWidth = Math.min(w, IMAGE_MAX_WIDTH);
+      const displayHeight = displayWidth * aspectRatio;
 
-          console.log('OCR Result:', JSON.stringify(ocrResult, null, 2));
+      setImage({
+        uri,
+        width: w,
+        height: h,
+        displayWidth,
+        displayHeight,
+      });
 
-          if (ocrResult.success) {
-            setResult(ocrResult);
-            Alert.alert(
-              'Success',
-              `Found ${ocrResult.pages?.[0]?.elements.length || 0} text elements`,
-            );
-          } else {
-            Alert.alert('Error', ocrResult.errorMessage || 'Recognition failed');
-          }
-
-          setLoading(false);
-        },
-        error => {
-          console.error('Image size error:', error);
-          Alert.alert('Error', 'Failed to load image');
-          setLoading(false);
-        },
+      // Perform OCR with timeout to prevent eternal spinner
+      const timeout = new Promise<any>((resolve) =>
+        setTimeout(() => {
+          console.log('OCR timeout after 30s');
+          resolve({success: false, error: true, errorMessage: 'OCR timeout after 30s'});
+        }, 30000),
       );
+
+      try {
+        // Auto-detect languages on iOS 16+ by passing empty array or omitting languages
+        // Or specify known languages for better accuracy: ['en', 'it', 'es']
+        console.log('Starting OCR with auto language detection');
+        const ocrResult = await Promise.race([
+          recognizeText(uri, {
+            languages: [], // Empty = auto-detect on iOS 16+, or specify: ['en', 'it']
+            recognitionLevel: 'word',
+          }),
+          timeout,
+        ]);
+
+        console.log('OCR Result:', JSON.stringify(ocrResult, null, 2));
+
+        if (ocrResult.success) {
+          setResult(ocrResult);
+          Alert.alert('Success', `Found ${ocrResult.pages?.[0]?.elements?.length || 0} text elements`);
+        } else {
+          Alert.alert('Error', ocrResult.errorMessage || 'Recognition failed');
+        }
+      } catch (err: any) {
+        console.error('OCR exception:', err);
+        Alert.alert('Error', err?.message || 'OCR failed with exception');
+      } finally {
+        setLoading(false);
+      }
     } catch (error: any) {
       console.error('Process error:', error);
       Alert.alert('Error', error.message);
@@ -168,45 +207,8 @@ function App() {
     }
   };
 
-  const renderBoundingBoxes = () => {
-    if (!image || !result?.pages?.[0]?.elements || !showBoxes) {
-      return null;
-    }
-
-    const {displayWidth, displayHeight} = image;
-    const elements = result.pages[0].elements;
-
-    return (
-      <Svg
-        width={displayWidth}
-        height={displayHeight}
-        style={styles.svgOverlay}>
-        {elements.map((element: RecognizedTextElement, index: number) => {
-          const box = element.boundingBox;
-          // Convert normalized coordinates to display coordinates
-          const x = box.x * displayWidth;
-          const y = box.y * displayHeight;
-          const width = box.width * displayWidth;
-          const height = box.height * displayHeight;
-
-          return (
-            <React.Fragment key={index}>
-              {/* Draw boxes only when they do not overlap text by placing them behind image (handled by z-order). */}
-              <Rect
-                x={x}
-                y={y}
-                width={width}
-                height={height}
-                stroke="#00ff00"
-                strokeWidth="1.5"
-                fill="none"
-              />
-            </React.Fragment>
-          );
-        })}
-      </Svg>
-    );
-  };
+  // Boxes are disabled in demo; render nothing
+  const renderBoundingBoxes = () => null;
 
   const renderRecognizedText = () => {
     if (!result?.pages?.[0]) {
@@ -296,15 +298,7 @@ function App() {
             <Text style={styles.buttonTextDark}>ℹ️ Check Availability</Text>
           </TouchableOpacity>
 
-          {image && (
-            <TouchableOpacity
-              style={[styles.button, styles.toggleButton]}
-              onPress={() => setShowBoxes(!showBoxes)}>
-              <Text style={styles.buttonTextDark}>
-                {showBoxes ? '🔲 Hide Boxes' : '📦 Show Boxes'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Toggle removed since boxes are not rendered */}
         </View>
 
         {/* Loading Indicator */}
