@@ -1,4 +1,4 @@
-// ReactNativeTextRecognition.m
+// ReactNativeTextRecognition.mm
 
 #import "ReactNativeTextRecognition.h"
 #import <Vision/Vision.h>
@@ -7,6 +7,7 @@
 #import <React/RCTLog.h>
 
 #ifdef RCT_NEW_ARCH_ENABLED
+#import <ReactCommon/RCTTurboModule.h>
 #import <React/RCTConvert.h>
 #endif
 
@@ -18,16 +19,16 @@
 
 RCT_EXPORT_MODULE()
 
-// Codegen will auto-generate the bridge/turbomodule registration
-
 + (BOOL)requiresMainQueueSetup {
     return NO;
 }
 
+#ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
-    (const facebook::react::TurboModule::InitParams &)params {
-    return std::make_shared<facebook::react::NativeTextRecognitionSpecJSI>(params);
+    (const facebook::react::ObjCTurboModule::InitParams &)params {
+    return std::make_shared<facebook::react::NativeReactNativeTextRecognitionSpecJSI>(params);
 }
+#endif
 
 #pragma mark - Public Methods
 
@@ -64,7 +65,6 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 {
     if (@available(iOS 16.0, *)) {
-        NSArray<VNRecognizedTextObservationRequestRevision> *revisions = @[@(VNRecognizeTextRequestRevision3)];
         NSArray *languages = [VNRecognizeTextRequest supportedRecognitionLanguagesForTextRecognitionLevel:VNRequestTextRecognitionLevelAccurate
                                                                                                   revision:VNRecognizeTextRequestRevision3
                                                                                                      error:nil];
@@ -244,24 +244,16 @@ API_AVAILABLE(ios(11.0))
     
     VNImageRequestHandler *handler = [[VNImageRequestHandler alloc] initWithCIImage:ciImage options:@{}];
     
-    __block NSArray *results = nil;
-    __block NSError *requestError = nil;
+    NSError *requestError = nil;
     
     VNRecognizeTextRequest *request = [self createTextRecognitionRequest:languages
                                                          recognitionLevel:recognitionLevel
                                                        useFastRecognition:useFastRecognition];
     
-    request.completionHandler = ^(VNRequest *request, NSError *error) {
-        if (!error) {
-            results = request.results;
-        } else {
-            requestError = error;
-        }
-    };
-    
     [handler performRequests:@[request] error:&requestError];
     
-    if (requestError || !results) {
+    NSArray *results = request.results;
+    if (requestError || results == nil) {
         return nil;
     }
     
@@ -278,9 +270,8 @@ API_AVAILABLE(ios(11.0))
     VNRecognizeTextRequest *request;
     
     if (@available(iOS 16.0, *)) {
-        // Use Revision 3 for iOS 16+
+        // iOS 16+ uses the latest available revision (Rev3) by default
         request = [[VNRecognizeTextRequest alloc] initWithCompletionHandler:nil];
-        request.revision = VNRecognizeTextRequestRevision3;
         
         // Set recognition level
         if (useFastRecognition) {
@@ -414,9 +405,7 @@ API_AVAILABLE(ios(11.0))
             }
         }];
         
-        if (@available(iOS 16.0, *)) {
-            request.revision = VNRecognizeTextRequestRevision3;
-        }
+        // On iOS 16+ the system uses latest revision automatically
         request.recognitionLevel = VNRequestTextRecognitionLevelAccurate;
         request.usesLanguageCorrection = YES;
         

@@ -4,7 +4,8 @@
 
 #ifdef RCT_NEW_ARCH_ENABLED
 #import <ReactNativeTextRecognitionSpec/ReactNativeTextRecognitionSpec.h>
-@interface ReactNativeTextRecognition : NSObject <NativeTextRecognitionSpec>
+// The generated protocol name is Native + <SpecName>
+@interface ReactNativeTextRecognition : NSObject <NativeReactNativeTextRecognitionSpec>
 #else
 @interface ReactNativeTextRecognition : NSObject <RCTBridgeModule>
 #endif

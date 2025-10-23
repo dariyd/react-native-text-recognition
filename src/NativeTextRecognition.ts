@@ -1,3 +1,8 @@
+/**
+ * Codegen spec for React Native Text Recognition
+ * This file is used by React Native Codegen to generate native spec files
+ */
+
 import type {TurboModule} from 'react-native';
 import {TurboModuleRegistry} from 'react-native';
 

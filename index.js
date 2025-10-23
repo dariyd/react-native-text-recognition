@@ -8,22 +8,25 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo Go\n';
 
-// Try to get the module from TurboModuleRegistry (new arch) or NativeModules (old arch)
+// Try new architecture (TurboModule) first, then fall back to old architecture
 let ReactNativeTextRecognition;
 
-if (global.__turboModuleProxy) {
+if (global.__turboModuleProxy != null) {
   try {
     const TurboModuleRegistry = require('react-native').TurboModuleRegistry;
     ReactNativeTextRecognition = TurboModuleRegistry.get('ReactNativeTextRecognition');
   } catch (e) {
-    // Fall back to old architecture
+    // New architecture not available, fall back to old arch
+    console.log('TurboModule not available, using old architecture');
   }
 }
 
+// Fall back to old architecture (NativeModules)
 if (!ReactNativeTextRecognition) {
   ReactNativeTextRecognition = NativeModules.ReactNativeTextRecognition;
 }
 
+// If still not found, throw a helpful error
 if (!ReactNativeTextRecognition) {
   ReactNativeTextRecognition = new Proxy(
     {},
