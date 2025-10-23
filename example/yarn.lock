@@ -1008,7 +1008,7 @@
 
 "@dariyd/react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
   version "2.0.6"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#2aab5608f20257c1dd1864688fb62cbd4b8c7aba"
+  resolved "https://github.com/dariyd/react-native-text-recognition.git#62bb9a3e25bf85beb54742acafbf5e379cf687ec"
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.9.0"

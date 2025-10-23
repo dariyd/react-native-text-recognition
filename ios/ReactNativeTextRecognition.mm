@@ -23,7 +23,7 @@ using namespace facebook::react;
              languages:(NSArray *)languages
       recognitionLevel:(NSString *)recognitionLevel
     useFastRecognition:(BOOL)useFastRecognition
-      preprocessImages:(BOOL)preprocessImages API_AVAILABLE(ios(11.0));
+      preprocessImages:(BOOL)preprocessImages;
 
 - (void)processImageFile:(NSURL *)url
                languages:(NSArray *)languages
@@ -233,6 +233,7 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
     });
 }
 
+- (void)processPDFFile:(NSURL *)url
                options:(NSDictionary *)options
               maxPages:(NSInteger)maxPages
                 pdfDpi:(NSInteger)pdfDpi
@@ -270,38 +271,42 @@ API_AVAILABLE(ios(11.0))
                 CGRect pageRect = [pdfPage boundsForBox:kPDFDisplayBoxMediaBox];
                 NSMutableArray *elements = [NSMutableArray array];
 
-                PDFSelection *entireSelection = [pdfPage selectionForEntirePage];
-                NSArray<PDFSelection *> *lineSelections = [entireSelection selectionsByLine];
+                // Get selection for the entire page using page bounds
+                PDFSelection *entireSelection = [pdfPage selectionForRect:pageRect];
+                
+                if (entireSelection) {
+                    NSArray<PDFSelection *> *lineSelections = [entireSelection selectionsByLine];
 
-                for (PDFSelection *sel in lineSelections) {
-                    NSString *lineText = sel.string ?: @"";
-                    if (lineText.length == 0) { continue; }
-                    CGRect bounds = [sel boundsForPage:pdfPage];
+                    for (PDFSelection *sel in lineSelections) {
+                        NSString *lineText = sel.string ?: @"";
+                        if (lineText.length == 0) { continue; }
+                        CGRect bounds = [sel boundsForPage:pdfPage];
 
-                    // Normalize to [0,1] with top-left origin
-                    CGFloat normX = bounds.origin.x / pageRect.size.width;
-                    CGFloat normY = 1.0 - ((bounds.origin.y + bounds.size.height) / pageRect.size.height);
-                    CGFloat normW = bounds.size.width / pageRect.size.width;
-                    CGFloat normH = bounds.size.height / pageRect.size.height;
+                        // Normalize to [0,1] with top-left origin
+                        CGFloat normX = bounds.origin.x / pageRect.size.width;
+                        CGFloat normY = 1.0 - ((bounds.origin.y + bounds.size.height) / pageRect.size.height);
+                        CGFloat normW = bounds.size.width / pageRect.size.width;
+                        CGFloat normH = bounds.size.height / pageRect.size.height;
 
-                    NSDictionary *element = @{
-                        @"text": lineText,
-                        @"confidence": @1.0, // Text comes from PDF, assume perfect
-                        @"level": @"line",
-                        @"boundingBox": @{
-                            @"x": @(normX),
-                            @"y": @(normY),
-                            @"width": @(normW),
-                            @"height": @(normH),
-                            @"absoluteBox": @{
-                                @"x": @(bounds.origin.x),
-                                @"y": @(pageRect.size.height - bounds.origin.y - bounds.size.height),
-                                @"width": @(bounds.size.width),
-                                @"height": @(bounds.size.height)
+                        NSDictionary *element = @{
+                            @"text": lineText,
+                            @"confidence": @1.0, // Text comes from PDF, assume perfect
+                            @"level": @"line",
+                            @"boundingBox": @{
+                                @"x": @(normX),
+                                @"y": @(normY),
+                                @"width": @(normW),
+                                @"height": @(normH),
+                                @"absoluteBox": @{
+                                    @"x": @(bounds.origin.x),
+                                    @"y": @(pageRect.size.height - bounds.origin.y - bounds.size.height),
+                                    @"width": @(bounds.size.width),
+                                    @"height": @(bounds.size.height)
+                                }
                             }
-                        }
-                    };
-                    [elements addObject:element];
+                        };
+                        [elements addObject:element];
+                    }
                 }
 
                 NSDictionary *pageResult = @{
