@@ -10,8 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "@dariyd/react-native-text-recognition": "https://github.com/dariyd/react-native-text-recognition.git",
-    "@react-native-documents/viewer": "^2.0.0",
+    "@dariyd/react-native-text-recognition": "file:../",
+    "@react-native-documents/picker": "^11.0.0",
     "react": "19.1.0",
     "react-native": "0.80.2",
     "react-native-image-picker": "^7.1.0",

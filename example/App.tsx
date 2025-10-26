@@ -19,9 +19,8 @@ import {
   useColorScheme,
 } from 'react-native';
 import {launchImageLibrary, Asset} from 'react-native-image-picker';
-import {pick, types} from '@react-native-documents/picker';
-import {openDocument} from '@react-native-documents/viewer';
 import Svg, {Rect} from 'react-native-svg';
+import {pick, types} from '@react-native-documents/picker';
 import {recognizeText, isAvailable, getSupportedLanguages} from '@dariyd/react-native-text-recognition';
 import type {
   TextRecognitionResult,
@@ -92,40 +91,27 @@ function App() {
 
   const selectFromFiles = async () => {
     try {
-      const result = await pick({
+      // Open mode keeps a reference to the original file
+      const [file] = await pick({
         mode: 'open',
         type: [types.images, types.pdf],
         allowMultiSelection: false,
       });
 
-      const file = result[0];
       if (file?.uri) {
         await processImage(file.uri);
       }
     } catch (error: any) {
       // User cancelled the picker
-      if (error?.message?.includes('cancel')) {
+      if (error?.message?.toLowerCase().includes('cancel')) {
         return;
       }
-      Alert.alert('Error', error.message || 'Failed to pick file');
+      Alert.alert('Error', error?.message || 'Failed to pick file');
     }
   };
 
-  const viewPdf = async () => {
-    if (!currentPdfUri) {
-      Alert.alert('Error', 'No PDF selected');
-      return;
-    }
-    
-    try {
-      await openDocument({
-        url: currentPdfUri,
-        fileName: 'document.pdf',
-      });
-    } catch (error: any) {
-      Alert.alert('Error', `Failed to open PDF: ${error.message}`);
-    }
-  };
+  // Removed PDF viewer. We use picker only.
+  const viewPdf = async () => {};
 
   const processImage = async (uri: string, asset?: Asset) => {
     setLoading(true);
@@ -365,15 +351,7 @@ function App() {
             </TouchableOpacity>
           )}
 
-          {currentPdfUri && (
-            <TouchableOpacity
-              style={[styles.button, styles.viewPdfButton]}
-              onPress={viewPdf}>
-              <Text style={styles.buttonText}>
-                📄 View PDF
-              </Text>
-            </TouchableOpacity>
-          )}
+          {/* Removed 'View PDF' button as viewer is not used */}
         </View>
 
         {/* Loading Indicator */}
