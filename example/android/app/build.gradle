@@ -84,6 +84,14 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        
+        // Fix for NDK 27+ removing gold linker - use lld instead
+        externalNativeBuild {
+            cmake {
+                arguments "-DANDROID_STL=c++_shared",
+                          "-DANDROID_LINKER=lld"
+            }
+        }
     }
     signingConfigs {
         debug {

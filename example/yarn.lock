@@ -1007,8 +1007,8 @@
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
 "@dariyd/react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
-  version "2.0.6"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#62bb9a3e25bf85beb54742acafbf5e379cf687ec"
+  version "2.0.8"
+  resolved "https://github.com/dariyd/react-native-text-recognition.git#54d3685055506438175225927e423993dbb841f6"
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.9.0"
