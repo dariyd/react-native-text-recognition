@@ -258,6 +258,8 @@ function App() {
       return null;
     }
 
+    console.log('Result:', JSON.stringify(result, null, 2));
+
     const page = result.pages[0];
 
     return (

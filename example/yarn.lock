@@ -1006,9 +1006,8 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@dariyd/react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
-  version "2.0.10"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#45097726745a42632964f66257fd7dcad051fde8"
+"@dariyd/react-native-text-recognition@file:..":
+  version "2.0.13"
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.9.0"
@@ -1530,11 +1529,6 @@
   version "11.0.0"
   resolved "https://registry.yarnpkg.com/@react-native-documents/picker/-/picker-11.0.0.tgz#6f6914bf791c6e05ea0884fb64b66127178b3cf8"
   integrity sha512-SyP4j88HyyHOUA/N5UGsuf5Ij7BURHSPbZ7F12yjCNVwjXkeFJcFzyxkOGbgNQs9U5b88TgoQDTyjvmYNXYjJg==
-
-"@react-native-documents/viewer@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@react-native-documents/viewer/-/viewer-2.0.0.tgz#c44d94a9aa20f84192713844119c633c46dfc5cf"
-  integrity sha512-6HopNDdNHpEF8U2ScA9O2NX5+MZC0r50Hs1QU0mYkOWt1QE9EShKV1RwXLxHLgnYjIO8B3OAE7kVcpY2Ss1r6w==
 
 "@react-native/assets-registry@0.80.2":
   version "0.80.2"
