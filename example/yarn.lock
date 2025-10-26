@@ -1007,8 +1007,8 @@
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
 "@dariyd/react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
-  version "2.0.8"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#54d3685055506438175225927e423993dbb841f6"
+  version "2.0.9"
+  resolved "https://github.com/dariyd/react-native-text-recognition.git#598fad5c781a1e3f3cdc8551c9a0e9f5463fd0f5"
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.9.0"
@@ -1525,6 +1525,11 @@
     graceful-fs "^4.1.3"
     prompts "^2.4.2"
     semver "^7.5.2"
+
+"@react-native-documents/viewer@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@react-native-documents/viewer/-/viewer-2.0.0.tgz#c44d94a9aa20f84192713844119c633c46dfc5cf"
+  integrity sha512-6HopNDdNHpEF8U2ScA9O2NX5+MZC0r50Hs1QU0mYkOWt1QE9EShKV1RwXLxHLgnYjIO8B3OAE7kVcpY2Ss1r6w==
 
 "@react-native/assets-registry@0.80.2":
   version "0.80.2"
@@ -5484,18 +5489,6 @@ react-is@^19.1.0:
   version "19.2.0"
   resolved "https://registry.yarnpkg.com/react-is/-/react-is-19.2.0.tgz#ddc3b4a4e0f3336c3847f18b806506388d7b9973"
   integrity sha512-x3Ax3kNSMIIkyVYhWPyO09bu0uttcAIoecO/um/rKGQ4EltYWVYtyiGkS/3xMynrbVQdS69Jhlv8FXUEZehlzA==
-
-react-native-document-picker@^9.1.1:
-  version "9.3.1"
-  resolved "https://registry.yarnpkg.com/react-native-document-picker/-/react-native-document-picker-9.3.1.tgz#f2c33237a906fd0893130e0605c8f18a3aef1605"
-  integrity sha512-Vcofv9wfB0j67zawFjfq9WQPMMzXxOZL9kBmvWDpjVuEcVK73ndRmlXHlkeFl5ZHVsv4Zb6oZYhqm9u5omJOPA==
-  dependencies:
-    invariant "^2.2.4"
-
-react-native-image-picker@^7.1.0:
-  version "7.2.3"
-  resolved "https://registry.yarnpkg.com/react-native-image-picker/-/react-native-image-picker-7.2.3.tgz#9c402591462af256cdd9aed796c28083a48f90cd"
-  integrity sha512-zKIZUlQNU3EtqizsXSH92zPeve4vpUrsqHu2kkpCxWE9TZhJFZBb+irDsBOY8J21k0+Edgt06TMQGJ+iPUIXyA==
 
 react-native-svg@^15.0.0:
   version "15.14.0"

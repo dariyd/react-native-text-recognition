@@ -19,7 +19,8 @@ import {
   useColorScheme,
 } from 'react-native';
 import {launchImageLibrary, Asset} from 'react-native-image-picker';
-import DocumentPicker from 'react-native-document-picker';
+import {pick, types} from '@react-native-documents/picker';
+import {openDocument} from '@react-native-documents/viewer';
 import Svg, {Rect} from 'react-native-svg';
 import {recognizeText, isAvailable, getSupportedLanguages} from '@dariyd/react-native-text-recognition';
 import type {
@@ -44,6 +45,7 @@ function App() {
   const [image, setImage] = useState<ProcessedImage | null>(null);
   const [result, setResult] = useState<TextRecognitionResult | null>(null);
   const [showBoxes, setShowBoxes] = useState(true);
+  const [currentPdfUri, setCurrentPdfUri] = useState<string | null>(null);
 
   const backgroundColor = isDarkMode ? '#000' : '#fff';
   const textColor = isDarkMode ? '#fff' : '#000';
@@ -90,11 +92,9 @@ function App() {
 
   const selectFromFiles = async () => {
     try {
-      const result = await DocumentPicker.pick({
-        type: [
-          DocumentPicker.types.images,
-          DocumentPicker.types.pdf,
-        ],
+      const result = await pick({
+        mode: 'open',
+        type: [types.images, types.pdf],
         allowMultiSelection: false,
       });
 
@@ -103,10 +103,27 @@ function App() {
         await processImage(file.uri);
       }
     } catch (error: any) {
-      if (DocumentPicker.isCancel(error)) {
+      // User cancelled the picker
+      if (error?.message?.includes('cancel')) {
         return;
       }
-      Alert.alert('Error', error.message);
+      Alert.alert('Error', error.message || 'Failed to pick file');
+    }
+  };
+
+  const viewPdf = async () => {
+    if (!currentPdfUri) {
+      Alert.alert('Error', 'No PDF selected');
+      return;
+    }
+    
+    try {
+      await openDocument({
+        url: currentPdfUri,
+        fileName: 'document.pdf',
+      });
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to open PDF: ${error.message}`);
     }
   };
 
@@ -114,6 +131,10 @@ function App() {
     setLoading(true);
     setImage(null);
     setResult(null);
+    
+    // Track if this is a PDF
+    const isPdf = uri.toLowerCase().endsWith('.pdf');
+    setCurrentPdfUri(isPdf ? uri : null);
 
     try {
       console.log('Processing:', uri);
@@ -343,6 +364,16 @@ function App() {
               </Text>
             </TouchableOpacity>
           )}
+
+          {currentPdfUri && (
+            <TouchableOpacity
+              style={[styles.button, styles.viewPdfButton]}
+              onPress={viewPdf}>
+              <Text style={styles.buttonText}>
+                📄 View PDF
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Loading Indicator */}
@@ -433,6 +464,9 @@ const styles = StyleSheet.create({
   },
   toggleButton: {
     backgroundColor: '#34C759',
+  },
+  viewPdfButton: {
+    backgroundColor: '#AF52DE',
   },
   buttonText: {
     color: '#fff',
