@@ -71,6 +71,14 @@ android {
         }
     }
     
+    // Configure which variants to publish (AGP 7+ requirement)
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+    
     namespace 'com.reactnativetextrecognition'
 }
 
@@ -163,17 +171,95 @@ dependencies {
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
 }
 
-// Publishing configuration
+// Custom tasks for generating Javadoc and sources JARs
+afterEvaluate { project ->
+    task androidJavadoc(type: Javadoc) {
+        source = android.sourceSets.main.java.srcDirs
+        classpath += files(android.bootClasspath)
+        
+        // Use a resolvable configuration when available
+        def cc = project.configurations.findByName('compileClasspath')
+        if (cc != null) {
+            classpath += files(cc.asList())
+        } else {
+            logger.lifecycle("react-native-text-recognition: 'compileClasspath' not found; skipping extra Javadoc classpath setup.")
+        }
+        include '**/*.java'
+        
+        // Suppress warnings for missing documentation
+        options.addStringOption('Xdoclint:none', '-quiet')
+    }
+
+    task androidJavadocJar(type: Jar, dependsOn: androidJavadoc) {
+        archiveClassifier.set('javadoc')
+        from androidJavadoc.destinationDir
+    }
+
+    task androidSourcesJar(type: Jar) {
+        archiveClassifier.set('sources')
+        from android.sourceSets.main.java.srcDirs
+        include '**/*.java'
+    }
+
+    android.libraryVariants.all { variant ->
+        def name = variant.name.capitalize()
+        def javaCompileTask = variant.javaCompileProvider.get()
+
+        task "jar${name}"(type: Jar, dependsOn: javaCompileTask) {
+            from javaCompileTask.destinationDir
+        }
+    }
+}
+
+// Modern maven-publish plugin configuration
+def packageJson = new groovy.json.JsonSlurper().parseText(file('../package.json').text)
+
 afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                from components.release
-                
-                groupId = 'com.reactnativetextrecognition'
-                artifactId = 'react-native-text-recognition'
-                version = '2.0.0'
+    // Only configure publishing if the Android components expose a 'release' variant
+    def releaseComponent = components.findByName("release")
+    if (releaseComponent != null) {
+        publishing {
+            publications {
+                release(MavenPublication) {
+                    from releaseComponent
+                    
+                    groupId = 'com.reactnativetextrecognition'
+                    artifactId = packageJson.name
+                    version = packageJson.version
+                    
+                    artifact androidSourcesJar
+                    artifact androidJavadocJar
+                    
+                    pom {
+                        name = packageJson.name
+                        description = packageJson.description ?: 'Advanced OCR text recognition for React Native'
+                        url = packageJson.repository?.baseUrl ?: packageJson.repository?.url ?: ''
+                        
+                        licenses {
+                            license {
+                                name = packageJson.license ?: 'MIT'
+                                url = (packageJson.repository?.baseUrl ?: packageJson.repository?.url ?: '') + '/blob/main/LICENSE'
+                                distribution = 'repo'
+                            }
+                        }
+                        
+                        developers {
+                            developer {
+                                id = packageJson.author?.name ?: 'dariyd'
+                                name = packageJson.author?.name ?: 'Dariy'
+                            }
+                        }
+                    }
+                }
+            }
+            repositories {
+                maven {
+                    // Deploy to local maven directory
+                    url = uri("file://${projectDir}/maven")
+                }
             }
         }
+    } else {
+        logger.lifecycle("react-native-text-recognition: Skipping maven-publish because no 'release' component is available (AGP too old or not applied).")
     }
 }
