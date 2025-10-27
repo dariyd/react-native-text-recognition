@@ -82,7 +82,7 @@ RCT_EXPORT_METHOD(detectText:(NSString *)imgUrl
 }
 
 RCT_EXPORT_METHOD(isAvailable:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     // Text recognition is available on iOS 13+
     if (@available(iOS 13.0, *)) {
@@ -93,7 +93,7 @@ RCT_EXPORT_METHOD(isAvailable:(RCTPromiseResolveBlock)resolve
 }
 
 RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
+                  reject:(RCTPromiseRejectBlock)reject)
 {
     if (@available(iOS 16.0, *)) {
         NSArray *languages = [VNRecognizeTextRequest supportedRecognitionLanguagesForTextRecognitionLevel:VNRequestTextRecognitionLevelAccurate
