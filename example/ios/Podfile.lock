@@ -1706,7 +1706,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - react-native-text-recognition (2.0.14):
+  - react-native-text-recognition (2.0.15):
     - boost
     - DoubleConversion
     - fast_float
@@ -2553,7 +2553,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 5d00fefc19f0bc9a6432e5533683d6fc9c3da4e1
   react-native-document-picker: 19ab5e2af2d2b3765d58a7f1635f9ca9c8b22831
   react-native-image-picker: 588b86a708e2527ce8766e75f8b56cd88b8e0620
-  react-native-text-recognition: c8de76e80339ecdea02ba1229703b15e456bcafc
+  react-native-text-recognition: 3009c90fd6bceb680eef5a73d49912f0e3f46369
   React-NativeModulesApple: b22e6abb44d78270dfdfc7d85efe29e35e0333a7
   React-oscompat: 56d6de59f9ae95cd006a1c40be2cde83bc06a4e1
   React-perflogger: 0633844e495d8b34798c9bf0cb32ce315f1d5c9f

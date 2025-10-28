@@ -2,7 +2,7 @@
 
 Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit (Android). Supports multi-language recognition, PDF files, and both old and new React Native architectures.
 
-[![npm version](https://badge.fury.io/js/react-native-text-recognition.svg)](https://badge.fury.io/js/react-native-text-recognition)
+[![npm version](https://badge.fury.io/js/@dariyd%2Freact-native-text-recognition.svg)](https://badge.fury.io/js/@dariyd%2Freact-native-text-recognition)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
@@ -19,39 +19,87 @@ Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit 
   - Android: Uses Google ML Kit Text Recognition v2
 - 📊 **Rich Metadata**: Get page numbers, dimensions, and hierarchical text structure
 
+## Demo
+
+See the library in action:
+
+| iOS Demo | Android Demo |
+|----------|--------------|
+| ![iOS Demo](./assets/ios_demo.gif) | ![Android Demo](./assets/android_demo.gif) |
+
+The demo shows:
+- 📷 Selecting images from gallery and files
+- 📄 Processing PDF documents
+- 🔍 Real-time OCR with bounding boxes
+- 📊 Displaying recognized text with confidence scores
+- 🌐 Multi-language support (English, Italian, Ukrainian, etc.)
+
 ## Installation
 
 ```bash
-npm install react-native-text-recognition
+npm install @dariyd/react-native-text-recognition
 ```
 
 or with yarn:
 
 ```bash
-yarn add react-native-text-recognition
+yarn add @dariyd/react-native-text-recognition
 ```
 
 ### iOS Setup
 
+Install pods:
+
 ```bash
-cd ios && pod install
+cd ios && pod install && cd ..
 ```
 
-Add camera permission to your `Info.plist` (if scanning from camera):
+**Important for iOS:** The library requires iOS 13.0 or higher. If you encounter build errors, ensure your `ios/Podfile` has:
+
+```ruby
+platform :ios, '13.0'
+```
+
+**Optional:** Add camera permission to your `Info.plist` (only if scanning from camera):
 
 ```xml
 <key>NSCameraUsageDescription</key>
 <string>We need access to your camera to scan documents</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>We need access to your photo library to select images</string>
 ```
 
 ### Android Setup
 
 The module automatically includes ML Kit dependencies. No additional setup required.
 
-Add to your `AndroidManifest.xml` (if scanning from camera):
+**Important for Android:** Ensure your `android/build.gradle` has:
+
+```gradle
+buildscript {
+    ext {
+        minSdkVersion = 21
+        compileSdkVersion = 35
+        targetSdkVersion = 35
+    }
+}
+```
+
+**Optional:** Add permissions to your `AndroidManifest.xml` (only if scanning from camera or accessing storage):
 
 ```xml
 <uses-permission android:name="android.permission.CAMERA" />
+<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+```
+
+### New Architecture Support
+
+**iOS:** ✅ Fully supported (automatically detected)
+**Android:** ⚠️ Keep `newArchEnabled=false` in `android/gradle.properties` for now
+
+```properties
+# android/gradle.properties
+newArchEnabled=false
 ```
 
 ## Requirements
@@ -74,7 +122,7 @@ Add to your `AndroidManifest.xml` (if scanning from camera):
 The library automatically detects file types and applies optimal settings:
 
 ```javascript
-import { recognizeText } from 'react-native-text-recognition';
+import { recognizeText } from '@dariyd/react-native-text-recognition';
 
 // Works for both images and PDFs with smart defaults
 const result = await recognizeText('file:///path/to/image.jpg');
@@ -120,7 +168,7 @@ result.pages.forEach((page) => {
 ### Legacy API (Backward Compatible)
 
 ```javascript
-import { detectText } from 'react-native-text-recognition';
+import { detectText } from '@dariyd/react-native-text-recognition';
 
 // Old API still works
 const result = await detectText('file:///path/to/image.jpg');
@@ -130,7 +178,7 @@ console.log(result.detectedWords);
 ### Check Availability
 
 ```javascript
-import { isAvailable, getSupportedLanguages } from 'react-native-text-recognition';
+import { isAvailable, getSupportedLanguages } from '@dariyd/react-native-text-recognition';
 
 const available = await isAvailable();
 console.log('Text recognition available:', available);
@@ -427,7 +475,7 @@ This module requires **React Native 0.77.3 or higher** and supports the new arch
 ### Recognize Text from Image
 
 ```javascript
-import { recognizeText } from 'react-native-text-recognition';
+import { recognizeText } from '@dariyd/react-native-text-recognition';
 
 const recognizeImage = async (imagePath) => {
   try {
@@ -453,7 +501,7 @@ const recognizeImage = async (imagePath) => {
 ### Extract Text from PDF
 
 ```javascript
-import { recognizeText } from 'react-native-text-recognition';
+import { recognizeText } from '@dariyd/react-native-text-recognition';
 
 const extractPdfText = async (pdfPath) => {
   try {

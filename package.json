@@ -12,7 +12,9 @@
     "ios",
     "index.js",
     "index.d.ts",
-    "react-native-text-recognition.podspec"
+    "react-native-text-recognition.podspec",
+    "assets",
+    "src"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

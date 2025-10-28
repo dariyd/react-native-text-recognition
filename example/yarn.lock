@@ -1006,12 +1006,9 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@dariyd/react-native-text-recognition@file:..":
-  version "2.0.14"
-
 "@dariyd/react-native-text-recognition@https://github.com/dariyd/react-native-text-recognition.git":
-  version "2.0.14"
-  resolved "https://github.com/dariyd/react-native-text-recognition.git#77c14f834ec007e45d6538423fbd616d37f5184b"
+  version "2.0.15"
+  resolved "https://github.com/dariyd/react-native-text-recognition.git#66d797bbb517975624d266f3e4ac0542fa1ed38d"
 
 "@eslint-community/eslint-utils@^4.2.0", "@eslint-community/eslint-utils@^4.4.0":
   version "4.9.0"
