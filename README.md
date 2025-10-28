@@ -9,7 +9,7 @@ Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit 
 
 - 🎯 **Smart Defaults**: Automatically detects file types (PDF/image) and applies optimal settings - no configuration needed!
 - 📱 **Cross-platform**: iOS 13+ and Android 21+
-- 🚀 **New Architecture Ready**: Full support for React Native new architecture (Fabric/TurboModules) on iOS, old architecture support on Android
+- 🚀 **New Architecture Ready**: Full TurboModule support on iOS, Bridge compatibility on Android (works with both old and new arch)
 - 🔤 **Multi-language Support**: Recognizes text in 100+ languages with automatic detection
 - 📄 **PDF Support**: High-quality PDF text extraction (400 DPI by default) on both platforms
 - 🎯 **Flexible Results**: Get text with bounding boxes, confidence scores, and coordinates
@@ -94,13 +94,14 @@ buildscript {
 
 ### New Architecture Support
 
-**iOS:** ✅ Fully supported (automatically detected)
-**Android:** ⚠️ Keep `newArchEnabled=false` in `android/gradle.properties` for now
+**iOS:** ✅ **Full TurboModule support** (automatically detected)
+**Android:** ✅ **Bridge mode with full compatibility** (works with `newArchEnabled=true`)
 
-```properties
-# android/gradle.properties
-newArchEnabled=false
-```
+The library works seamlessly with React Native's new architecture:
+- iOS uses native TurboModules implementation
+- Android uses the stable Bridge API (fully compatible with new architecture apps)
+
+No special configuration needed - just install and use! 🎉
 
 ## Requirements
 
@@ -455,20 +456,24 @@ While both platforms provide similar functionality, there are some differences:
 
 ## React Native New Architecture
 
-This module requires **React Native 0.77.3 or higher** and supports the new architecture on iOS, while using the stable old architecture on Android.
+This module requires **React Native 0.77.3 or higher** and is **fully compatible** with the new architecture.
 
 ### iOS
-✅ **Full support** for new architecture (Fabric/TurboModules)
+✅ **Native TurboModule implementation**
 - Automatically detected when `RCT_NEW_ARCH_ENABLED=1`
-- Seamless fallback to old architecture
+- Seamless fallback to Bridge mode on old architecture
 - Uses VNRecognizeTextRequestRevision3 on iOS 16+ for best accuracy
 - Automatically falls back to earlier revisions on iOS 13-15
 
 ### Android
-⚠️ **Old architecture only** (for now)
-- Uses stable bridge implementation
-- New architecture support planned for future release
-- Keep `newArchEnabled=false` in `gradle.properties`
+✅ **Bridge mode with full compatibility**
+- Uses stable Bridge API (ReactPackage)
+- Works seamlessly with `newArchEnabled=true` (new arch apps)
+- Works with `newArchEnabled=false` (old arch apps)
+- Full backward compatibility with React Native's interop layer
+
+**Why Bridge mode on Android?**
+React Native 0.60+ provides excellent interoperability between Bridge and TurboModule APIs. Bridge modules work perfectly in new architecture apps without any issues or performance penalties for this use case.
 
 ## Examples
 
