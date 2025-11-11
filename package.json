@@ -1,7 +1,7 @@
 {
   "name": "@dariyd/react-native-text-recognition",
   "title": "React Native Text Recognition",
-  "version": "2.0.17",
+  "version": "2.0.18",
   "description": "Advanced OCR text recognition for React Native with Vision API (iOS) and ML Kit (Android). Supports multi-language recognition, PDF files, and both old and new React Native architectures.",
   "main": "index.js",
   "types": "index.d.ts",
