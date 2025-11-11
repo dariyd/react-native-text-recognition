@@ -27,6 +27,14 @@ buildscript {
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'maven-publish'
+apply plugin: 'com.facebook.react'
+
+react {
+    // Must match the target name referenced by autolinking/CMake
+    libraryName = "ReactNativeTextRecognitionSpec"
+    // Java package used for generated sources
+    codegenJavaPackageName = "com.reactnativetextrecognition"
+}
 
 def isNewArchitectureEnabled() {
     return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
