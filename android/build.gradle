@@ -175,10 +175,10 @@ dependencies {
     implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
     
     // For language support (Chinese, Devanagari, Japanese, Korean)
-    implementation 'com.google.mlkit:text-recognition-chinese:16.0.0'
-    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.0'
-    implementation 'com.google.mlkit:text-recognition-japanese:16.0.0'
-    implementation 'com.google.mlkit:text-recognition-korean:16.0.0'
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
     
     // PDF support
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
