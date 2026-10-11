@@ -202,27 +202,63 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
     });
 }
 
+// Translate UIImage's orientation enum (which is what `imageWithContentsOfFile:`
+// produces after honouring EXIF) to Vision/Core Graphics' orientation enum.
+// Without this, Vision processes the raw bitmap bytes — ignoring EXIF —
+// so its bounding boxes end up in the pre-rotation coordinate space while
+// the displayed image (which RN's <Image> rotates per EXIF) sits in the
+// post-rotation visual space. Mismatch → highlights placed wrong on
+// rotated photos. Mirrors the C# OcrParser TextRecognizer.cs.
+static CGImagePropertyOrientation CGImageOrientationFromUIImageOrientation(UIImageOrientation o) {
+    switch (o) {
+        case UIImageOrientationUp:            return kCGImagePropertyOrientationUp;
+        case UIImageOrientationDown:          return kCGImagePropertyOrientationDown;
+        case UIImageOrientationLeft:          return kCGImagePropertyOrientationLeft;
+        case UIImageOrientationRight:         return kCGImagePropertyOrientationRight;
+        case UIImageOrientationUpMirrored:    return kCGImagePropertyOrientationUpMirrored;
+        case UIImageOrientationDownMirrored:  return kCGImagePropertyOrientationDownMirrored;
+        case UIImageOrientationLeftMirrored:  return kCGImagePropertyOrientationLeftMirrored;
+        case UIImageOrientationRightMirrored: return kCGImagePropertyOrientationRightMirrored;
+    }
+    return kCGImagePropertyOrientationUp;
+}
+
 - (void)processImageFile:(NSURL *)url
                languages:(NSArray *)languages
         recognitionLevel:(NSString *)recognitionLevel
       useFastRecognition:(BOOL)useFastRecognition
                 callback:(RCTResponseSenderBlock)callback
 {
-    VNImageRequestHandler *requestHandler = [[VNImageRequestHandler alloc] initWithURL:url options:@{}];
-    
+    // Load via UIImage so EXIF orientation is honoured. Pass that
+    // orientation to Vision and use the EXIF-corrected size for the
+    // dimensions we report back — both must live in the same coordinate
+    // space the on-device <Image> uses to render the image, otherwise
+    // overlay highlights drift on rotated photos.
+    UIImage *image = [UIImage imageWithContentsOfFile:url.path];
+    if (!image || !image.CGImage) {
+        [self sendError:@"Failed to load image" callback:callback];
+        return;
+    }
+    CGImagePropertyOrientation orientation =
+        CGImageOrientationFromUIImageOrientation(image.imageOrientation);
+
+    VNImageRequestHandler *requestHandler =
+        [[VNImageRequestHandler alloc] initWithCGImage:image.CGImage
+                                            orientation:orientation
+                                                options:@{}];
+
     VNRecognizeTextRequest *request = [self createTextRecognitionRequest:languages
                                                          recognitionLevel:recognitionLevel
                                                        useFastRecognition:useFastRecognition];
-    
+
     NSError *error = nil;
     [requestHandler performRequests:@[request] error:&error];
-    
+
     if (error) {
         [self sendError:[NSString stringWithFormat:@"Request error: %@", error.localizedDescription] callback:callback];
         return;
     }
-    
-    // Get image dimensions for bounding boxes
+
     NSArray *results = request.results;
     if (results == nil || results.count == 0) {
         // Empty results - still success
@@ -237,14 +273,10 @@ RCT_EXPORT_METHOD(getSupportedLanguages:(RCTPromiseResolveBlock)resolve
         });
         return;
     }
-    
-    // Get image size
-    CIImage *ciImage = [[CIImage alloc] initWithContentsOfURL:url];
-    CGSize imageSize = ciImage ? ciImage.extent.size : CGSizeMake(1024, 1024);
-    
+
     NSDictionary *pageResult = [self formatRecognitionResults:results
                                                     pageNumber:0
-                                                imageDimensions:imageSize
+                                                imageDimensions:image.size
                                               recognitionLevel:recognitionLevel];
     
     NSMutableString *fullText = [NSMutableString string];
@@ -545,44 +577,131 @@ API_AVAILABLE(ios(11.0))
 {
     NSMutableArray *elements = [NSMutableArray array];
     NSMutableString *fullText = [NSMutableString string];
-    
+
     for (VNRecognizedTextObservation *observation in results) {
         VNRecognizedText *topCandidate = [[observation topCandidates:1] firstObject];
         if (!topCandidate) continue;
-        
-        CGRect boundingBox = observation.boundingBox;
-        
-        // Convert Vision coordinates (bottom-left origin) to top-left origin
-        CGRect normalizedBox = CGRectMake(
-            boundingBox.origin.x,
-            1.0 - boundingBox.origin.y - boundingBox.size.height,
-            boundingBox.size.width,
-            boundingBox.size.height
-        );
-        
-        NSDictionary *element = @{
-            @"text": topCandidate.string,
-            @"confidence": @(topCandidate.confidence),
-            @"level": recognitionLevel,
-            @"boundingBox": @{
-                @"x": @(normalizedBox.origin.x),
-                @"y": @(normalizedBox.origin.y),
-                @"width": @(normalizedBox.size.width),
-                @"height": @(normalizedBox.size.height),
-                @"absoluteBox": @{
-                    @"x": @(normalizedBox.origin.x * dimensions.width),
-                    @"y": @(normalizedBox.origin.y * dimensions.height),
-                    @"width": @(normalizedBox.size.width * dimensions.width),
-                    @"height": @(normalizedBox.size.height * dimensions.height)
+
+        NSString *observationText = topCandidate.string;
+        if (observationText.length == 0) continue;
+
+        // Vision returns observations at line/phrase granularity. Split the
+        // recognised string on whitespace and ask Vision for the bounding
+        // box of each token via `boundingBoxForRange:error:`. In .accurate
+        // mode this returns per-word boxes Vision actually measured —
+        // matching the approach used by the production C# OcrParser
+        // (TextRecognizer.cs in tem-app-maui).
+        BOOL emittedAnyWord = NO;
+        NSUInteger pos = 0;
+        NSArray<NSString *> *tokens = [observationText componentsSeparatedByString:@" "];
+
+        for (NSString *token in tokens) {
+            NSUInteger tokenLen = token.length;
+            if (tokenLen == 0) {
+                pos += 1; // account for the space we split on
+                continue;
+            }
+
+            NSRange tokenRange = NSMakeRange(pos, tokenLen);
+            CGRect normalizedBox = CGRectZero;
+            BOOL haveBox = NO;
+
+            if (@available(iOS 13.0, *)) {
+                NSError *bbError = nil;
+                VNRectangleObservation *rectObs = [topCandidate boundingBoxForRange:tokenRange
+                                                                              error:&bbError];
+                if (rectObs && !bbError) {
+                    // Use the axis-aligned box enclosing all four corners,
+                    // flipped to top-left origin. The corners are named
+                    // relative to the TEXT, not the image, so picking an
+                    // edge from topLeft/bottomLeft is only right for upright
+                    // text — on a 90°-rotated receipt it shifts every word
+                    // box by its own length along the line.
+                    CGRect bb = rectObs.boundingBox;
+                    normalizedBox = CGRectMake(
+                        bb.origin.x,
+                        1.0 - bb.origin.y - bb.size.height,
+                        bb.size.width,
+                        bb.size.height
+                    );
+                    haveBox = YES;
                 }
             }
-        };
-        
-        [elements addObject:element];
-        [fullText appendString:topCandidate.string];
+
+            if (!haveBox) {
+                // Fallback: proportionally split the observation's bbox by
+                // character offset. Used only if boundingBoxForRange: fails
+                // (e.g. .fast recognition level on older iOS).
+                CGRect obsBox = observation.boundingBox;
+                CGFloat charWidth = obsBox.size.width / (CGFloat)observationText.length;
+                CGFloat startX = obsBox.origin.x + charWidth * (CGFloat)pos;
+                CGFloat width = charWidth * (CGFloat)tokenLen;
+                normalizedBox = CGRectMake(
+                    startX,
+                    1.0 - obsBox.origin.y - obsBox.size.height,
+                    width,
+                    obsBox.size.height
+                );
+            }
+
+            NSDictionary *element = @{
+                @"text": token,
+                @"confidence": @(topCandidate.confidence),
+                @"level": recognitionLevel,
+                @"boundingBox": @{
+                    @"x": @(normalizedBox.origin.x),
+                    @"y": @(normalizedBox.origin.y),
+                    @"width": @(normalizedBox.size.width),
+                    @"height": @(normalizedBox.size.height),
+                    @"absoluteBox": @{
+                        @"x": @(normalizedBox.origin.x * dimensions.width),
+                        @"y": @(normalizedBox.origin.y * dimensions.height),
+                        @"width": @(normalizedBox.size.width * dimensions.width),
+                        @"height": @(normalizedBox.size.height * dimensions.height)
+                    }
+                }
+            };
+
+            [elements addObject:element];
+            emittedAnyWord = YES;
+            pos += tokenLen + 1; // +1 for the space separator
+        }
+
+        if (!emittedAnyWord) {
+            // Defensive: if every token was empty (string of only spaces),
+            // fall back to emitting the whole observation as one element so
+            // we don't drop content silently.
+            CGRect obsBox = observation.boundingBox;
+            CGRect normalizedBox = CGRectMake(
+                obsBox.origin.x,
+                1.0 - obsBox.origin.y - obsBox.size.height,
+                obsBox.size.width,
+                obsBox.size.height
+            );
+            NSDictionary *element = @{
+                @"text": observationText,
+                @"confidence": @(topCandidate.confidence),
+                @"level": recognitionLevel,
+                @"boundingBox": @{
+                    @"x": @(normalizedBox.origin.x),
+                    @"y": @(normalizedBox.origin.y),
+                    @"width": @(normalizedBox.size.width),
+                    @"height": @(normalizedBox.size.height),
+                    @"absoluteBox": @{
+                        @"x": @(normalizedBox.origin.x * dimensions.width),
+                        @"y": @(normalizedBox.origin.y * dimensions.height),
+                        @"width": @(normalizedBox.size.width * dimensions.width),
+                        @"height": @(normalizedBox.size.height * dimensions.height)
+                    }
+                }
+            };
+            [elements addObject:element];
+        }
+
+        [fullText appendString:observationText];
         [fullText appendString:@" "];
     }
-    
+
     return @{
         @"pageNumber": @(pageNumber),
         @"dimensions": @{
